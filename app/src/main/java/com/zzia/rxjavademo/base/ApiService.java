@@ -1,5 +1,6 @@
 package com.zzia.rxjavademo.base;
 
+import com.zzia.rxjavademo.OssAuthMessage;
 import com.zzia.rxjavademo.User;
 
 import java.util.List;
@@ -28,4 +29,7 @@ public interface ApiService {
     @Multipart
     @POST("upload/uploadMultiFile")
     Observable<HttpResult<Void>> uploadMultiPic(@PartMap Map<String, RequestBody> params);
+
+    @GET("user/getAuthMessage")
+    Observable<HttpResult<OssAuthMessage>> getAuthMessage();
 }

@@ -11,6 +11,17 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.alibaba.sdk.android.oss.ClientConfiguration;
+import com.alibaba.sdk.android.oss.ClientException;
+import com.alibaba.sdk.android.oss.OSS;
+import com.alibaba.sdk.android.oss.OSSClient;
+import com.alibaba.sdk.android.oss.ServiceException;
+import com.alibaba.sdk.android.oss.callback.OSSCompletedCallback;
+import com.alibaba.sdk.android.oss.callback.OSSProgressCallback;
+import com.alibaba.sdk.android.oss.common.auth.OSSCredentialProvider;
+import com.alibaba.sdk.android.oss.common.auth.OSSStsTokenCredentialProvider;
+import com.alibaba.sdk.android.oss.model.PutObjectRequest;
+import com.alibaba.sdk.android.oss.model.PutObjectResult;
 import com.luck.picture.lib.compress.Luban;
 import com.luck.picture.lib.model.FunctionConfig;
 import com.luck.picture.lib.model.FunctionOptions;
@@ -19,6 +30,7 @@ import com.yalantis.ucrop.entity.LocalMedia;
 import com.zzia.rxjavademo.adapter.GridImageAdapter;
 import com.zzia.rxjavademo.base.ApiClient;
 import com.zzia.rxjavademo.base.BaseActivity;
+import com.zzia.rxjavademo.base.Constants;
 import com.zzia.rxjavademo.base.HttpResult;
 import com.zzia.rxjavademo.utils.FullyGridLayoutManager;
 
@@ -35,7 +47,11 @@ import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-public class FileUploadActivity extends BaseActivity {
+/**
+ * 将文件上传到阿里oss服务器上
+ */
+
+public class OssServerFileUploadActivity extends BaseActivity {
     @Bind(R.id.as_pics_rv)
     RecyclerView picsRecyclerView;
     @Bind(R.id.ast_cancel_tv)
@@ -84,7 +100,7 @@ public class FileUploadActivity extends BaseActivity {
     }
 
     private void initViews() {
-        FullyGridLayoutManager manager = new FullyGridLayoutManager(FileUploadActivity.this, 4, GridLayoutManager.VERTICAL, false);
+        FullyGridLayoutManager manager = new FullyGridLayoutManager(OssServerFileUploadActivity.this, 4, GridLayoutManager.VERTICAL, false);
         picsRecyclerView.setLayoutManager(manager);
         //隐藏键盘
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -95,7 +111,7 @@ public class FileUploadActivity extends BaseActivity {
     }
 
     private void initAdapter() {
-        mAdapter = new GridImageAdapter(FileUploadActivity.this, onAddPicClickListener);
+        mAdapter = new GridImageAdapter(OssServerFileUploadActivity.this, onAddPicClickListener);
         mAdapter.setList(selectMedia);
         mAdapter.setSelectMax(9);
         picsRecyclerView.setAdapter(mAdapter);
@@ -105,12 +121,12 @@ public class FileUploadActivity extends BaseActivity {
                 switch (selectType) {
                     case FunctionConfig.TYPE_IMAGE:
                         // 预览图片
-                        PictureConfig.getInstance().externalPicturePreview(FileUploadActivity.this, position, selectMedia);
+                        PictureConfig.getInstance().externalPicturePreview(OssServerFileUploadActivity.this, position, selectMedia);
                         break;
                     case FunctionConfig.TYPE_VIDEO:
                         // 预览视频
                         if (selectMedia.size() > 0) {
-                            PictureConfig.getInstance().externalPictureVideo(FileUploadActivity.this, selectMedia.get(position).getPath());
+                            PictureConfig.getInstance().externalPictureVideo(OssServerFileUploadActivity.this, selectMedia.get(position).getPath());
                         }
                         break;
                 }
@@ -129,32 +145,21 @@ public class FileUploadActivity extends BaseActivity {
         sendTv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(FileUploadActivity.this,"请稍等....",Toast.LENGTH_LONG).show();
+                Toast.makeText(OssServerFileUploadActivity.this, "请稍等....", Toast.LENGTH_LONG).show();
 
                 if (selectMedia.size() == 1) {
                     //上传单张图片
-                    uploadOneFile(selectMedia.get(0).getPath());
-                } else {
-                    //上传多张图片
-                    List<File> files = new ArrayList<>();
-                    for (LocalMedia media : selectMedia) {
-                        files.add(new File(media.getPath()));
-                    }
-                    uploadMultiFile(files);
+                    uploadOneFile(new File(selectMedia.get(0).getPath()));
                 }
-
             }
         });
     }
 
-    public void uploadOneFile(String path) {
-        //单个文件上传，也可以通过多文件上传partMap的方式
-        File file = new File(path);
-        RequestBody requestBody = RequestBody.create(MediaType.parse("image/*"), file);
-        ApiClient.getApiService().uploadOnePic(requestBody)
+    private void uploadOneFile(final File file) {
+        ApiClient.getApiService().getAuthMessage()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<HttpResult<Void>>() {
+                .subscribe(new Subscriber<HttpResult<OssAuthMessage>>() {
                     @Override
                     public void onCompleted() {
 
@@ -162,17 +167,67 @@ public class FileUploadActivity extends BaseActivity {
 
                     @Override
                     public void onError(Throwable e) {
-                        Log.e(TAG, "onError: " + e.getMessage());
 
                     }
 
                     @Override
-                    public void onNext(HttpResult<Void> result) {
-                        Toast.makeText(FileUploadActivity.this,"单个文件上传成功",Toast.LENGTH_LONG).show();
-                        Log.e(TAG, "单个文件上传:" + result.getMessage() + " " + result.getResultCode());
-
+                    public void onNext(HttpResult<OssAuthMessage> result) {
+                        uploadToOss(file, result.getData());
                     }
                 });
+
+
+    }
+
+    private void uploadToOss(File file, OssAuthMessage ossAuthMessage) {
+        //1.初始化oss
+        String endpoint = "http://oss-cn-beijing.aliyuncs.com";
+        OSSCredentialProvider credentialProvider = new OSSStsTokenCredentialProvider(ossAuthMessage.getAccessKeyId(), ossAuthMessage.getSecretKeyId(), ossAuthMessage.getSecurityToken());
+        //该配置类如果不设置，会有默认配置，具体可看该类
+        ClientConfiguration conf = new ClientConfiguration();
+        conf.setConnectionTimeout(15 * 1000); // 连接超时，默认15秒
+        conf.setSocketTimeout(15 * 1000); // socket超时，默认15秒
+        conf.setMaxConcurrentRequest(5); // 最大并发请求数，默认5个
+        conf.setMaxErrorRetry(2); // 失败后最大重试次数，默认2次
+        OSS oss = new OSSClient(getApplicationContext(), endpoint, credentialProvider, conf);
+        //2.异步上传时可以设置进度回调
+        final String fileName = "image_" + System.currentTimeMillis() + "." + file.getPath().split("\\.")[1];
+        PutObjectRequest put = new PutObjectRequest(Constants.BUCKET_NAME, fileName, file.getPath());
+        put.setProgressCallback(new OSSProgressCallback<PutObjectRequest>() {
+            @Override
+            public void onProgress(PutObjectRequest request, long currentSize, long totalSize) {
+                Log.e("PutObject", "currentSize: " + currentSize + " totalSize: " + totalSize);
+            }
+        });
+        oss.asyncPutObject(put, new OSSCompletedCallback<PutObjectRequest, PutObjectResult>() {
+            @Override
+            public void onSuccess(final PutObjectRequest request, final PutObjectResult result) {
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(OssServerFileUploadActivity.this, "文件已经上传到阿里oss空间", Toast.LENGTH_LONG).show();
+                        Log.e("PutObject", "UploadSuccess" + " " + "图片地址是：" + Constants.OSS_NET + fileName);
+                    }
+                });
+
+            }
+
+            @Override
+            public void onFailure(PutObjectRequest request, ClientException clientExcepion, ServiceException serviceException) {
+                // 请求异常
+                if (clientExcepion != null) {
+                    // 本地异常如网络异常等
+                    clientExcepion.printStackTrace();
+                }
+                if (serviceException != null) {
+                    // 服务异常
+                    Log.e("ErrorCode", serviceException.getErrorCode());
+                    Log.e("RequestId", serviceException.getRequestId());
+                    Log.e("HostId", serviceException.getHostId());
+                    Log.e("RawMessage", serviceException.getRawMessage());
+                }
+            }
+        });
     }
 
     public void uploadMultiFile(List<File> files) {
@@ -200,7 +255,7 @@ public class FileUploadActivity extends BaseActivity {
 
                     @Override
                     public void onNext(HttpResult<Void> result) {
-                        Toast.makeText(FileUploadActivity.this,"多个文件上传成功",Toast.LENGTH_LONG).show();
+                        Toast.makeText(OssServerFileUploadActivity.this, "多个文件上传成功", Toast.LENGTH_LONG).show();
                         Log.e(TAG, "多个文件上传:" + result.getMessage() + " " + result.getResultCode());
 
                     }
@@ -263,7 +318,7 @@ public class FileUploadActivity extends BaseActivity {
                             .setThemeStyle(themeStyle) // 设置主题样式
                             .create();
                     // 先初始化参数配置，在启动相册
-                    PictureConfig.getInstance().init(options).openPhoto(FileUploadActivity.this, resultCallback);
+                    PictureConfig.getInstance().init(options).openPhoto(OssServerFileUploadActivity.this, resultCallback);
 
                     break;
                 case 1:

@@ -1,6 +1,9 @@
 package com.zzia.rxjavademo;
 
+import android.content.Intent;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
 import com.zzia.rxjavademo.base.BaseActivity;
 
@@ -8,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import butterknife.Bind;
 import rx.Observable;
 import rx.Subscriber;
 import rx.functions.Action1;
@@ -18,6 +22,10 @@ public class MainActivity extends BaseActivity {
      * rxjava的各种使用
      */
     private static final String TAG = "zziafyc";
+    @Bind(R.id.goLocalServer)
+    Button goLocalBtn;
+    @Bind(R.id.goOssServer)
+    Button goOssBtn;
 
     @Override
     public int getLayoutResourceId() {
@@ -39,6 +47,20 @@ public class MainActivity extends BaseActivity {
         mapUse();
         fromFlatMapUse();
         justFlatMapUse();
+        goLocalBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, LocalServerFileUploadActivity.class);
+                startActivity(intent);
+            }
+        });
+        goOssBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, OssServerFileUploadActivity.class);
+                startActivity(intent);
+            }
+        });
 
 
     }
