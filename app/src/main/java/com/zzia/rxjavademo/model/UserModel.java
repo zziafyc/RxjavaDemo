@@ -1,4 +1,4 @@
-package com.zzia.rxjavademo;
+package com.zzia.rxjavademo.model;
 
 /**
  * Created by fyc on 2017/10/17.

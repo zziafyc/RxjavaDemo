@@ -7,6 +7,7 @@ import android.widget.TextView;
 
 import com.zzia.rxjavademo.base.ApiClient;
 import com.zzia.rxjavademo.base.BaseActivity;
+import com.zzia.rxjavademo.model.User;
 
 import java.util.List;
 

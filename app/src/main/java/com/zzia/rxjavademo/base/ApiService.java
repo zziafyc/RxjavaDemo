@@ -1,7 +1,7 @@
 package com.zzia.rxjavademo.base;
 
-import com.zzia.rxjavademo.OssAuthMessage;
-import com.zzia.rxjavademo.User;
+import com.zzia.rxjavademo.model.OssAuthMessage;
+import com.zzia.rxjavademo.model.User;
 
 import java.util.List;
 import java.util.Map;

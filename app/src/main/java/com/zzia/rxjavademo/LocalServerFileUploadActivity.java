@@ -20,6 +20,7 @@ import com.zzia.rxjavademo.adapter.GridImageAdapter;
 import com.zzia.rxjavademo.base.ApiClient;
 import com.zzia.rxjavademo.base.BaseActivity;
 import com.zzia.rxjavademo.base.HttpResult;
+import com.zzia.rxjavademo.model.PhotoModel;
 import com.zzia.rxjavademo.utils.FullyGridLayoutManager;
 
 import java.io.File;

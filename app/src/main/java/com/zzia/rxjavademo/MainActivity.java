@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.Button;
 
 import com.zzia.rxjavademo.base.BaseActivity;
+import com.zzia.rxjavademo.model.UserModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,8 @@ public class MainActivity extends BaseActivity {
     Button goLocalBtn;
     @Bind(R.id.goOssServer)
     Button goOssBtn;
+    @Bind(R.id.goRefreshAndLoadMore)
+    Button goRefreshAndLoadMoreBtn;
 
     @Override
     public int getLayoutResourceId() {
@@ -58,6 +61,13 @@ public class MainActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, OssServerFileUploadActivity.class);
+                startActivity(intent);
+            }
+        });
+        goRefreshAndLoadMoreBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, SmartRefreshLayoutActivity.class);
                 startActivity(intent);
             }
         });

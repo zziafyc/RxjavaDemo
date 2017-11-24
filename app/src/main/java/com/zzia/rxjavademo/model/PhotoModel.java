@@ -1,4 +1,4 @@
-package com.zzia.rxjavademo;
+package com.zzia.rxjavademo.model;
 
 import java.io.Serializable;
 
