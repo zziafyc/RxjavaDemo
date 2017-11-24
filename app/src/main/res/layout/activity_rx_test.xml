@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:context="com.zzia.rxjavademo.RxTestActivity">
+    <include layout="@layout/common_app_bar"/>
 
     <Button
         android:id="@+id/btn"

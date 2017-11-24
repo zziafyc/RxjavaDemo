@@ -8,10 +8,13 @@
     android:orientation="vertical"
     tools:context="com.zzia.rxjavademo.MainActivity">
 
+    <include layout="@layout/common_app_bar"/>
+
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
         android:text="rxjava的各种用法"
         android:textColor="@color/colorBlue"
         android:textSize="30sp"/>
